@@ -1,5 +1,6 @@
 ﻿using DotNetUtils.Win32.user32.dll;
 using DotNetUtils.Win32.UserActivity;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -46,6 +47,21 @@ namespace DotNetUtils.Win32.UserActivity
         private void OnMonitoringTimerExpiry(object source, ElapsedEventArgs e)
         {
             UserActivityMonitoringEvent.ProcessUserActivity();
+        }
+
+        public async void ClearAllUserActivityStats()
+        {
+            using var db = Factory.NewUserActivityContext();
+
+            var metaInfoSet = await db.UserActivityMetaInfoSet.AsQueryable().ToListAsync();
+            Console.WriteLine($"Deleting all {metaInfoSet.Count} elements in UserActivityMetaInfo Table");
+            db.UserActivityMetaInfoSet.RemoveRange(metaInfoSet);
+
+            var sessionSet = await db.UserActivitySessionSet.AsQueryable().ToListAsync();
+            Console.WriteLine($"Found {sessionSet.Count} elements in UserActivitySession Table");
+            db.UserActivitySessionSet.RemoveRange(sessionSet);
+
+            await db.SaveChangesAsync();
         }
     }
 }

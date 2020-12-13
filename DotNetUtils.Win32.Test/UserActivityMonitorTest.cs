@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using DotNetUtils.Win32.UserActivity;
+using DotNetUtils.Win32.UserActivity.DB;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DotNetUtils.Win32.Test
@@ -8,11 +9,10 @@ namespace DotNetUtils.Win32.Test
     public class UserActivityMonitorTest
     {
         [TestMethod]
-        public void TestUserActivityMonitoringTimer()
+        public void TestClearAllUserActivityStats()
         {
-            new UserActivityMonitor().StartMonitoring();
-            Thread.Sleep(10000);
-            Assert.IsTrue(true);
+            var uam = new UserActivityMonitor();
+            uam.ClearAllUserActivityStats();
         }
     }
 }

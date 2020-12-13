@@ -35,7 +35,18 @@ namespace DotNetUtils.Win32.UserActivity
         /// </summary>
         void StopMonitoring();
 
+        /// <summary>
+        /// Fetches the user activity statistics in the specified time period.
+        /// </summary>
+        /// <param name="StatsFrom"></param>
+        /// <param name="StatsTo"></param>
+        /// <returns></returns>
         UserActivityStats GetUserActivityStats(DateTime StatsFrom, DateTime StatsTo);
+
+        /// <summary>
+        /// Cleans up all saved user activity data reverting to initial app state.
+        /// </summary>
+        void ClearAllUserActivityStats();
     }
 
     public delegate void UserInactiveCallbackType(DateTime lastUserInputTime);
