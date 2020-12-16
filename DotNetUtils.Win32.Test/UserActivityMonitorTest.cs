@@ -12,26 +12,31 @@ namespace DotNetUtils.Win32.Test
         [TestMethod]
         public void TestFactoryAppNameValidation()
         {
+            bool exceptionRaised = false;
+
             try
             {
+                exceptionRaised = false;
                 var uam = new UserActivityMonitor("");
-                Assert.Fail("Empty app name should not be accepted.");
             }
-            catch (Exception) { }
+            catch (Exception) { exceptionRaised = true; }
+            Assert.IsTrue(exceptionRaised, "Empty app name should not be accepted.");
 
             try
             {
+                exceptionRaised = false;
                 var uam = new UserActivityMonitor("   ");
-                Assert.Fail("Whitespace app name should not be accepted.");
             }
-            catch (Exception) { }
+            catch (Exception) { exceptionRaised = true; }
+            Assert.IsTrue(exceptionRaised, "Whitespace app name should not be accepted.");
 
             try
             {
+                exceptionRaised = false;
                 var uam = new UserActivityMonitor(null);
-                Assert.Fail("null app name should not be accepted.");
             }
-            catch (Exception) { }
+            catch (Exception) { exceptionRaised = true; }
+            Assert.IsTrue(exceptionRaised, "null app name should not be accepted.");
         }
 
         [TestMethod]
