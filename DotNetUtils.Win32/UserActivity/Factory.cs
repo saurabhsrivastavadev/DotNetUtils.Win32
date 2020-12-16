@@ -7,9 +7,19 @@ using System.Threading.Tasks;
 
 namespace DotNetUtils.Win32.UserActivity
 {
-    class Factory
+    public static class Factory
     {
-        public static UserActivityContext NewUserActivityContext()
+        public static string AppName
+        {
+            get => (!string.IsNullOrWhiteSpace(_appName)) ? _appName :
+                throw new Exception(
+                    "Factory.AppName must be set before using DotNetUtils.Win32 library APIs");
+            set => _appName = (!string.IsNullOrWhiteSpace(value)) ? value.Trim() :
+                throw new ArgumentException("Factory.AppName cannot be null or whitespace");
+        }
+        private static string _appName;
+
+        internal static UserActivityContext NewUserActivityContext()
         {
             return new UserActivityContext();
         }

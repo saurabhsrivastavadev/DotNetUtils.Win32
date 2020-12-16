@@ -15,6 +15,17 @@ namespace DotNetUtils.Win32.UserActivity
         public TimeSpan UserInactivityThreshold { get; set; }
         public UserInactiveCallbackType UserInactiveCallback { get; set; }
 
+        /// <summary>
+        /// Create UserActivityMonitor instance by specifying the app name
+        /// </summary>
+        /// <param name="appName">
+        /// Name of the application using DotNetUtils.Win32 library
+        /// </param>
+        public UserActivityMonitor(string appName)
+        {
+            Factory.AppName = appName;
+        }
+
         public DateTime GetLastUserInputTime()
         {
             return LastInputInfo.GetLastUserInputTime();

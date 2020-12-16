@@ -17,23 +17,27 @@ namespace DotNetUtils.Win32.UserActivity.DB
         public DbSet<UserActivitySessionModel> UserActivitySessionSet { get; set; }
 
         private readonly string _userActivityDir;
-        private readonly string _dbFilePath;
+        private readonly string _userActivityDbFilePath;
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlite($"Data Source={_dbFilePath}");
+            optionsBuilder.UseSqlite($"Data Source={_userActivityDbFilePath}");
         }
 
         public UserActivityContext()
         {
             // DB file path
-            string rootDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string parentDir = Path.Combine(rootDir, @"sauviapps");
-            string appDir = Path.Combine(parentDir, @"dotnetutils.win32");
-            _userActivityDir = Path.Combine(appDir, @"useractivity");
-            _dbFilePath = Path.Combine(_userActivityDir, @"useractivity.db");
+            string rootDirName = Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData);
+            string appDirName = Factory.AppName;
+            string libDirName = "dotnetutils.win32";
+            string userActivityDirName = "useractivity";
+            string userActivityDbFileName = "useractivity.db";
+            _userActivityDir = Path.Combine(
+                rootDirName, appDirName, libDirName, userActivityDirName);
+            _userActivityDbFilePath = Path.Combine(_userActivityDir, userActivityDbFileName);
 
-            Console.WriteLine($"DB File Path: {_dbFilePath}");
+            Console.WriteLine($"DB File Path: {_userActivityDbFilePath}");
 
             Init();
         }
@@ -47,7 +51,7 @@ namespace DotNetUtils.Win32.UserActivity.DB
             }
 
             // Apply DB Migration
-            if (!File.Exists(_dbFilePath))
+            if (!File.Exists(_userActivityDbFilePath))
             {
                 Console.WriteLine("useractivity.db file not present, create by applying migration.");
                 Database.Migrate();
