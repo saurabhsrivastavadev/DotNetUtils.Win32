@@ -1,4 +1,5 @@
 ﻿using DotNetUtils.Win32.UserActivity.DB;
+using DotNetUtils.Win32.UserActivity.DB.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,9 +20,14 @@ namespace DotNetUtils.Win32.UserActivity
         }
         private static string _appName;
 
-        internal static UserActivityContext NewUserActivityContext()
-        {
-            return new UserActivityContext();
-        }
+        public static TimeSpan MonitoringInterval { get; set; } = TimeSpan.FromMinutes(1);
+
+        public static TimeSpan UserConsideredInactiveAfter { get; set; } = TimeSpan.FromSeconds(30);
+
+        internal static UserActivityContext NewUserActivityContext() => new UserActivityContext();
+
+        internal static UserActivityMetaInfoModel NewUserActivityMetaInfoModel() => new UserActivityMetaInfoModel();
+
+        internal static UserActivitySessionModel NewUserActivitySessionModel() => new UserActivitySessionModel();
     }
 }
