@@ -22,7 +22,7 @@ namespace DotNetUtils.Win32.UserActivity
 
         public static TimeSpan MonitoringInterval { get; set; } = TimeSpan.FromMinutes(1);
 
-        public static TimeSpan UserConsideredInactiveAfter { get; set; } = TimeSpan.FromSeconds(30);
+        public static TimeSpan UserConsideredInactiveAfter { get; set; } = TimeSpan.FromMinutes(2);
 
         internal static UserActivityContext NewUserActivityContext() => new UserActivityContext();
 

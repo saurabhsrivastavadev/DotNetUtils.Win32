@@ -14,12 +14,39 @@ namespace DotNetUtils.Win32.UserActivity
     /// </summary>
     static class UserActivityMonitoringEvent
     {
+        private static DateTime CurrentEventTimestamp { get; set; }
+
         public static void ProcessUserActivity()
         {
             Console.WriteLine("ProcessUserActivity()");
 
+            CurrentEventTimestamp = DateTime.Now;
             DateTime lastMonitoringEvent = MetaInfoUpdate();
             SessionUpdate(lastMonitoringEvent);
+        }
+
+        public static void ProcessExplicitStopMonitoringCall()
+        {
+            Console.WriteLine("ProcessExplicitStopMonitoringCall()");
+
+            using var db = Factory.NewUserActivityContext();
+
+            if (db.UserActivitySessionSet.Any())
+            {
+                int maxId = db.UserActivitySessionSet.Max(session => session.Id);
+                var latestSession = db.UserActivitySessionSet.Where(s => (s.Id == maxId)).First();
+
+                if (latestSession.UserActivityState == UserActivityState.ACTIVE ||
+                        latestSession.UserActivityState == UserActivityState.INACTIVE)
+                {
+                    latestSession.SessionEndTime = DateTime.Now;
+                    var newSession = NewUnmonitoredSessionRow(DateTime.Now);
+                    newSession.SessionEndTime = DateTime.MinValue;
+                    db.UserActivitySessionSet.Add(newSession);
+                }
+            }
+
+            db.SaveChanges();
         }
 
         private static DateTime MetaInfoUpdate()
@@ -39,7 +66,7 @@ namespace DotNetUtils.Win32.UserActivity
                 lastMonitoringEvent = metaInfo.LatestMonitoringEventTime;
             }
 
-            metaInfo.LatestMonitoringEventTime = DateTime.Now;
+            metaInfo.LatestMonitoringEventTime = CurrentEventTimestamp;
             db.SaveChanges();
 
             return lastMonitoringEvent;
@@ -69,7 +96,7 @@ namespace DotNetUtils.Win32.UserActivity
                 }
                 else if (latestSession.UserActivityState != GetCurrentUserActivityState())
                 {
-                    latestSession.SessionEndTime = DateTime.Now;
+                    latestSession.SessionEndTime = CurrentEventTimestamp;
                     db.UserActivitySessionSet.Add(NewActiveInactiveSessionRow());
                 }
             }
@@ -82,7 +109,7 @@ namespace DotNetUtils.Win32.UserActivity
             var session = Factory.NewUserActivitySessionModel();
             session.UserActivityState = UserActivityState.UNMONITORED;
             session.SessionStartTime = lastMonitoringEvent;
-            session.SessionEndTime = DateTime.Now;
+            session.SessionEndTime = CurrentEventTimestamp;
             return session;
         }
 
@@ -90,13 +117,13 @@ namespace DotNetUtils.Win32.UserActivity
         {
             var session = Factory.NewUserActivitySessionModel();
             session.UserActivityState = GetCurrentUserActivityState();
-            session.SessionStartTime = DateTime.Now;
+            session.SessionStartTime = CurrentEventTimestamp;
             return session;
         }
 
         private static bool IsUserUnmonitored(DateTime lastMonitoringEvent) =>
             lastMonitoringEvent != DateTime.MinValue &&
-            DateTime.Now.Subtract(lastMonitoringEvent) > (2 * Factory.MonitoringInterval);
+            CurrentEventTimestamp.Subtract(lastMonitoringEvent) > (2 * Factory.MonitoringInterval);
 
         private static bool IsUserActive() =>
             (LastInputInfo.GetMillisSinceLastUserInput() <

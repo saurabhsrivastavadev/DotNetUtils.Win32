@@ -20,11 +20,4 @@ namespace DotNetUtils.Win32.UserActivity.DB.Models
 
         public DateTime SessionEndTime { get; set; }
     }
-
-    enum UserActivityState
-    {
-        ACTIVE,
-        INACTIVE,
-        UNMONITORED
-    }
 }

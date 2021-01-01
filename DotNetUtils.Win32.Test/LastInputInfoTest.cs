@@ -32,7 +32,6 @@ namespace DotNetUtils.Win32.Test
 
         [TestMethod]
         [DataRow(60000)] // this should pass as long as the test executes 60 sec from last user input
-        [DataRow(1000)] // this will pass if we keep moving the pointer during execution
         public void TestMethod3(int threshold)
         {
             DateTime lastUserInputTime = LastInputInfo.GetLastUserInputTime();

@@ -49,9 +49,17 @@ namespace DotNetUtils.Win32.UserActivity
         void ClearAllUserActivityStats();
     }
 
+    public enum UserActivityState
+    {
+        ACTIVE,
+        INACTIVE,
+        UNMONITORED
+    }
+
     public delegate void UserInactiveCallbackType(DateTime lastUserInputTime);
 
-    public record UserActivitySession(DateTime SessionStartTime, DateTime SessionEndTime);
+    public record UserActivitySession(
+        UserActivityState ActivityState, DateTime SessionStartTime, DateTime SessionEndTime);
 
     public record UserActivityStats(
         DateTime StatsFrom, DateTime StatsTo,
