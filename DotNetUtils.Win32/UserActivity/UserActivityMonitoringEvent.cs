@@ -89,7 +89,8 @@ namespace DotNetUtils.Win32.UserActivity
             {
                 int maxId = db.UserActivitySessionSet.Max(session => session.Id);
                 var latestSession = db.UserActivitySessionSet.Where(s => (s.Id == maxId)).First();
-                if (IsUserUnmonitored(lastMonitoringEvent))
+                if (IsUserUnmonitored(lastMonitoringEvent) &&
+                        latestSession.UserActivityState != UserActivityState.UNMONITORED)
                 {
                     latestSession.SessionEndTime = lastMonitoringEvent;
                     db.UserActivitySessionSet.Add(NewUnmonitoredSessionRow(lastMonitoringEvent));

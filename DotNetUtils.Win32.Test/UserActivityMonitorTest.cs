@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using DotNetUtils.Win32.UserActivity;
 using DotNetUtils.Win32.UserActivity.DB;
@@ -121,6 +122,113 @@ namespace DotNetUtils.Win32.Test
             UserActivityStats stats = uam.GetUserActivityStats(statsFrom, statsTo);
 
             Assert.IsTrue(GetStatsTotalDurationDelta(statsDuration, stats) < 1);
+        }
+
+        [TestMethod]
+        [DataRow(12)]
+        [DataRow(120)]
+        [DataRow(120000)]
+        public void TestNoConsecutiveRowsWithSameActivityState(int statsDurationSec)
+        {
+            TimeSpan statsDuration = TimeSpan.FromSeconds(statsDurationSec);
+            DateTime statsFrom = DateTime.Now - statsDuration;
+            DateTime statsTo = DateTime.Now;
+
+            var uam = new UserActivityMonitor(TestAppName);
+            var stats = uam.GetUserActivityStats(statsFrom, statsTo);
+
+            DateTime lastEnd = DateTime.MinValue;
+            foreach (var stat in stats.UserActiveSessionList)
+            {
+                Assert.IsTrue(stat.SessionStartTime != lastEnd);
+                lastEnd = stat.SessionEndTime;
+            }
+            lastEnd = DateTime.MinValue;
+            foreach (var stat in stats.UserInactiveSessionList)
+            {
+                Assert.IsTrue(stat.SessionStartTime != lastEnd);
+                lastEnd = stat.SessionEndTime;
+            }
+            lastEnd = DateTime.MinValue;
+            foreach (var stat in stats.UserUnmonitoredSessionList)
+            {
+                Console.WriteLine($"Assert {stat.SessionStartTime} != {lastEnd}");
+                Assert.IsTrue(stat.SessionStartTime != lastEnd);
+                lastEnd = stat.SessionEndTime;
+            }
+        }
+
+        [TestMethod]
+        [DataRow(12)]
+        [DataRow(120)]
+        [DataRow(120000)]
+        public void TestStatsStartLessThanEnd(int statsDurationSec)
+        {
+            TimeSpan statsDuration = TimeSpan.FromSeconds(statsDurationSec);
+            DateTime statsFrom = DateTime.Now - statsDuration;
+            DateTime statsTo = DateTime.Now;
+
+            var uam = new UserActivityMonitor(TestAppName);
+            var stats = uam.GetUserActivityStats(statsFrom, statsTo);
+
+            foreach (var stat in stats.UserActiveSessionList)
+            {
+                Assert.IsTrue(
+                    stat.SessionStartTime < stat.SessionEndTime ||
+                        stat.SessionEndTime == DateTime.MinValue);
+            }
+            foreach (var stat in stats.UserInactiveSessionList)
+            {
+                Assert.IsTrue(
+                    stat.SessionStartTime < stat.SessionEndTime ||
+                        stat.SessionEndTime == DateTime.MinValue);
+            }
+            foreach (var stat in stats.UserUnmonitoredSessionList)
+            {
+                Assert.IsTrue(
+                    stat.SessionStartTime < stat.SessionEndTime ||
+                        stat.SessionEndTime == DateTime.MinValue);
+            }
+        }
+
+        [TestMethod]
+        [DataRow(12)]
+        [DataRow(120)]
+        [DataRow(120000)]
+        public void TestStatsOnlyOneRowWithOpenEndTime(int statsDurationSec)
+        {
+            TimeSpan statsDuration = TimeSpan.FromSeconds(statsDurationSec);
+            DateTime statsFrom = DateTime.Now - statsDuration;
+            DateTime statsTo = DateTime.Now;
+
+            var uam = new UserActivityMonitor(TestAppName);
+            var stats = uam.GetUserActivityStats(statsFrom, statsTo);
+            bool openRowFound = false;
+
+            foreach (var stat in stats.UserActiveSessionList)
+            {
+                Assert.IsTrue(stat.SessionEndTime != DateTime.MinValue || !openRowFound);
+                if (stat.SessionEndTime == DateTime.MinValue)
+                {
+                    openRowFound = true;
+                }
+            }
+            foreach (var stat in stats.UserInactiveSessionList)
+            {
+                Assert.IsTrue(stat.SessionEndTime != DateTime.MinValue || !openRowFound);
+                if (stat.SessionEndTime == DateTime.MinValue)
+                {
+                    openRowFound = true;
+                }
+            }
+            foreach (var stat in stats.UserUnmonitoredSessionList)
+            {
+                Assert.IsTrue(stat.SessionEndTime != DateTime.MinValue || !openRowFound);
+                if (stat.SessionEndTime == DateTime.MinValue)
+                {
+                    openRowFound = true;
+                }
+            }
         }
 
         private double GetStatsTotalDurationDelta(
