@@ -65,5 +65,5 @@ namespace DotNetUtils.Win32.UserActivity
         DateTime StatsFrom, DateTime StatsTo,
         TimeSpan TotalActiveTime, TimeSpan TotalInactiveTime, TimeSpan TotalUnmonitoredTime,
         List<UserActivitySession> UserActiveSessionList, List<UserActivitySession> UserInactiveSessionList,
-        List<UserActivitySession> UserUnmonitoredSessionList);
+        List<UserActivitySession> UserUnmonitoredSessionList, List<UserActivitySession> CompleteSessionList);
 }

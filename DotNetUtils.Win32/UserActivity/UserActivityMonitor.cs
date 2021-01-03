@@ -55,7 +55,7 @@ namespace DotNetUtils.Win32.UserActivity
             if (statsDbRows == null || statsDbRows.Count == 0)
             {
                 return new UserActivityStats(DateTime.MinValue, DateTime.MinValue,
-                    TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, null, null, null);
+                    TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, null, null, null, null);
             }
 
             DateTime dbStatsFrom = statsFrom > statsDbRows.First().SessionStartTime ?
@@ -70,6 +70,7 @@ namespace DotNetUtils.Win32.UserActivity
             List<UserActivitySession> activeSessionList = new();
             List<UserActivitySession> inactiveSessionList = new();
             List<UserActivitySession> unmonitoredSessionList = new();
+            List<UserActivitySession> completeSessionList = new();
 
             foreach (var session in statsDbRows)
             {
@@ -83,6 +84,10 @@ namespace DotNetUtils.Win32.UserActivity
                     statsFrom, statsTo);
 
                 Console.WriteLine($"session duration - {sessionDuration}");
+
+                completeSessionList.Add(
+                    new UserActivitySession(session.UserActivityState,
+                        session.SessionStartTime, session.SessionEndTime));
 
                 switch (session.UserActivityState)
                 {
@@ -111,7 +116,8 @@ namespace DotNetUtils.Win32.UserActivity
 
             return new UserActivityStats(statsFrom, statsTo,
                 totalActiveTime, totalInactiveTime, totalUnmonitoredTime,
-                activeSessionList, inactiveSessionList, unmonitoredSessionList);
+                activeSessionList, inactiveSessionList, unmonitoredSessionList,
+                completeSessionList);
         }
 
         private TimeSpan GetSessionDuration(
