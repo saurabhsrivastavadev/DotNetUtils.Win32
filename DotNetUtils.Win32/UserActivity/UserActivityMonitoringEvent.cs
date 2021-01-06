@@ -16,37 +16,45 @@ namespace DotNetUtils.Win32.UserActivity
     {
         private static DateTime CurrentEventTimestamp { get; set; }
 
+        private static readonly object _lock = DateTime.MinValue;
+
         public static void ProcessUserActivity()
         {
-            Console.WriteLine("ProcessUserActivity()");
+            lock(_lock)
+            {
+                Console.WriteLine("ProcessUserActivity()");
 
-            CurrentEventTimestamp = DateTime.Now;
-            DateTime lastMonitoringEvent = MetaInfoUpdate();
-            SessionUpdate(lastMonitoringEvent);
+                CurrentEventTimestamp = DateTime.Now;
+                DateTime lastMonitoringEvent = MetaInfoUpdate();
+                SessionUpdate(lastMonitoringEvent);
+            }
         }
 
         public static void ProcessExplicitStopMonitoringCall()
         {
-            Console.WriteLine("ProcessExplicitStopMonitoringCall()");
-
-            using var db = Factory.NewUserActivityContext();
-
-            if (db.UserActivitySessionSet.Any())
+            lock(_lock)
             {
-                int maxId = db.UserActivitySessionSet.Max(session => session.Id);
-                var latestSession = db.UserActivitySessionSet.Where(s => (s.Id == maxId)).First();
+                Console.WriteLine("ProcessExplicitStopMonitoringCall()");
 
-                if (latestSession.UserActivityState == UserActivityState.ACTIVE ||
-                        latestSession.UserActivityState == UserActivityState.INACTIVE)
+                using var db = Factory.NewUserActivityContext();
+
+                if (db.UserActivitySessionSet.Any())
                 {
-                    latestSession.SessionEndTime = DateTime.Now;
-                    var newSession = NewUnmonitoredSessionRow(DateTime.Now);
-                    newSession.SessionEndTime = DateTime.MinValue;
-                    db.UserActivitySessionSet.Add(newSession);
-                }
-            }
+                    int maxId = db.UserActivitySessionSet.Max(session => session.Id);
+                    var latestSession = db.UserActivitySessionSet.Where(s => (s.Id == maxId)).First();
 
-            db.SaveChanges();
+                    if (latestSession.UserActivityState == UserActivityState.ACTIVE ||
+                            latestSession.UserActivityState == UserActivityState.INACTIVE)
+                    {
+                        latestSession.SessionEndTime = DateTime.Now;
+                        var newSession = NewUnmonitoredSessionRow(DateTime.Now);
+                        newSession.SessionEndTime = DateTime.MinValue;
+                        db.UserActivitySessionSet.Add(newSession);
+                    }
+                }
+
+                db.SaveChanges();
+            }
         }
 
         private static DateTime MetaInfoUpdate()
