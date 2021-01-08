@@ -92,7 +92,7 @@ namespace DotNetUtils.Win32.Test
 
             uam.StartMonitoring();
 
-            Thread.Sleep(180000);
+            Thread.Sleep(120000);
 
             uam.StopMonitoring();
         }
@@ -125,34 +125,32 @@ namespace DotNetUtils.Win32.Test
         }
 
         [TestMethod]
-        [DataRow(12)]
-        [DataRow(120)]
-        [DataRow(120000)]
-        public void TestNoConsecutiveRowsWithSameActivityState(int statsDurationSec)
+        [DataRow(12, 0)]
+        [DataRow(120, 0)]
+        [DataRow(120000, 0)]
+        [DataRow(120000, 100)]
+        public void TestNoConsecutiveRowsWithSameActivityState(
+                            int statsDurationSec, int monitoringCycles)
         {
             TimeSpan statsDuration = TimeSpan.FromSeconds(statsDurationSec);
             DateTime statsFrom = DateTime.Now - statsDuration;
             DateTime statsTo = DateTime.Now;
 
             var uam = new UserActivityMonitor(TestAppName);
+
+            for (int i = 0; i < monitoringCycles; i++)
+            {
+                uam.StartMonitoring();
+                uam.StopMonitoring();
+                uam.GetUserActivityStats(
+                    DateTime.Now.Subtract(TimeSpan.FromMinutes(30)), DateTime.Now);
+            }
+
             var stats = uam.GetUserActivityStats(statsFrom, statsTo);
 
             DateTime lastEnd = DateTime.MinValue;
-            foreach (var stat in stats.UserActiveSessionList)
+            foreach (var stat in stats.CompleteSessionList)
             {
-                Assert.IsTrue(stat.SessionStartTime != lastEnd);
-                lastEnd = stat.SessionEndTime;
-            }
-            lastEnd = DateTime.MinValue;
-            foreach (var stat in stats.UserInactiveSessionList)
-            {
-                Assert.IsTrue(stat.SessionStartTime != lastEnd);
-                lastEnd = stat.SessionEndTime;
-            }
-            lastEnd = DateTime.MinValue;
-            foreach (var stat in stats.UserUnmonitoredSessionList)
-            {
-                Console.WriteLine($"Assert {stat.SessionStartTime} != {lastEnd}");
                 Assert.IsTrue(stat.SessionStartTime != lastEnd);
                 lastEnd = stat.SessionEndTime;
             }
@@ -171,19 +169,7 @@ namespace DotNetUtils.Win32.Test
             var uam = new UserActivityMonitor(TestAppName);
             var stats = uam.GetUserActivityStats(statsFrom, statsTo);
 
-            foreach (var stat in stats.UserActiveSessionList)
-            {
-                Assert.IsTrue(
-                    stat.SessionStartTime < stat.SessionEndTime ||
-                        stat.SessionEndTime == DateTime.MinValue);
-            }
-            foreach (var stat in stats.UserInactiveSessionList)
-            {
-                Assert.IsTrue(
-                    stat.SessionStartTime < stat.SessionEndTime ||
-                        stat.SessionEndTime == DateTime.MinValue);
-            }
-            foreach (var stat in stats.UserUnmonitoredSessionList)
+            foreach (var stat in stats.CompleteSessionList)
             {
                 Assert.IsTrue(
                     stat.SessionStartTime < stat.SessionEndTime ||
@@ -192,36 +178,34 @@ namespace DotNetUtils.Win32.Test
         }
 
         [TestMethod]
-        [DataRow(12)]
-        [DataRow(120)]
-        [DataRow(120000)]
-        public void TestStatsOnlyOneRowWithOpenEndTime(int statsDurationSec)
+        [DataRow(12, 0)]
+        [DataRow(120, 0)]
+        [DataRow(120000, 0)]
+        [DataRow(120000, 100)]
+        public void TestStatsOnlyOneRowWithOpenEndTime(
+                        int statsDurationSec, int monitoringCycles)
         {
             TimeSpan statsDuration = TimeSpan.FromSeconds(statsDurationSec);
             DateTime statsFrom = DateTime.Now - statsDuration;
             DateTime statsTo = DateTime.Now;
 
             var uam = new UserActivityMonitor(TestAppName);
+
+            if (monitoringCycles > 0)
+            {
+                uam.ClearAllUserActivityStats();
+            }
+            for (int i = 0; i < monitoringCycles; i++)
+            {
+                uam.StartMonitoring();
+                uam.StopMonitoring();
+                uam.GetUserActivityStats(
+                    DateTime.Now.Subtract(TimeSpan.FromMinutes(30)), DateTime.Now);
+            }
+
             var stats = uam.GetUserActivityStats(statsFrom, statsTo);
             bool openRowFound = false;
-
-            foreach (var stat in stats.UserActiveSessionList)
-            {
-                Assert.IsTrue(stat.SessionEndTime != DateTime.MinValue || !openRowFound);
-                if (stat.SessionEndTime == DateTime.MinValue)
-                {
-                    openRowFound = true;
-                }
-            }
-            foreach (var stat in stats.UserInactiveSessionList)
-            {
-                Assert.IsTrue(stat.SessionEndTime != DateTime.MinValue || !openRowFound);
-                if (stat.SessionEndTime == DateTime.MinValue)
-                {
-                    openRowFound = true;
-                }
-            }
-            foreach (var stat in stats.UserUnmonitoredSessionList)
+            foreach (var stat in stats.CompleteSessionList)
             {
                 Assert.IsTrue(stat.SessionEndTime != DateTime.MinValue || !openRowFound);
                 if (stat.SessionEndTime == DateTime.MinValue)

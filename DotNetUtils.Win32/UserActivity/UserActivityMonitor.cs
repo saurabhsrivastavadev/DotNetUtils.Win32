@@ -42,6 +42,16 @@ namespace DotNetUtils.Win32.UserActivity
 
             Console.WriteLine($"Getting stats from {statsFrom} to {statsTo}");
 
+            // stats fields
+            TimeSpan totalActiveTime = TimeSpan.Zero;
+            TimeSpan totalInactiveTime = TimeSpan.Zero;
+            TimeSpan totalUnmonitoredTime = TimeSpan.Zero;
+
+            List<UserActivitySession> activeSessionList = new();
+            List<UserActivitySession> inactiveSessionList = new();
+            List<UserActivitySession> unmonitoredSessionList = new();
+            List<UserActivitySession> completeSessionList = new();
+
             // Fetch all rows for required range
             using var db = Factory.NewUserActivityContext();
 
@@ -54,23 +64,17 @@ namespace DotNetUtils.Win32.UserActivity
 
             if (statsDbRows == null || statsDbRows.Count == 0)
             {
-                return new UserActivityStats(DateTime.MinValue, DateTime.MinValue,
-                    TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, null, null, null, null);
+                return new UserActivityStats(
+                    statsFrom, statsTo,
+                    totalActiveTime, totalInactiveTime, totalUnmonitoredTime,
+                    activeSessionList, inactiveSessionList, unmonitoredSessionList,
+                    completeSessionList);
             }
 
             DateTime dbStatsFrom = statsFrom > statsDbRows.First().SessionStartTime ?
                                         statsFrom : statsDbRows.First().SessionStartTime;
             DateTime dbStatsTo = statsTo < statsDbRows.Last().SessionEndTime ?
                                         statsTo : statsDbRows.Last().SessionEndTime;
-
-            TimeSpan totalActiveTime = TimeSpan.Zero;
-            TimeSpan totalInactiveTime = TimeSpan.Zero;
-            TimeSpan totalUnmonitoredTime = TimeSpan.Zero;
-
-            List<UserActivitySession> activeSessionList = new();
-            List<UserActivitySession> inactiveSessionList = new();
-            List<UserActivitySession> unmonitoredSessionList = new();
-            List<UserActivitySession> completeSessionList = new();
 
             foreach (var session in statsDbRows)
             {
