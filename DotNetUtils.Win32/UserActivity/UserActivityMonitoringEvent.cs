@@ -27,6 +27,7 @@ namespace DotNetUtils.Win32.UserActivity
                 CurrentEventTimestamp = DateTime.Now;
                 DateTime lastMonitoringEvent = MetaInfoUpdate();
                 SessionUpdate(lastMonitoringEvent);
+                DbSanityCheck();
             }
         }
 
@@ -108,6 +109,29 @@ namespace DotNetUtils.Win32.UserActivity
                     latestSession.SessionEndTime = CurrentEventTimestamp;
                     db.UserActivitySessionSet.Add(NewActiveInactiveSessionRow());
                 }
+            }
+
+            db.SaveChanges();
+        }
+
+        private static void DbSanityCheck()
+        {
+            // look for rows with same start/end time
+            using var db = Factory.NewUserActivityContext();
+
+            var sameStartEndRows = db.UserActivitySessionSet.Where(
+                session => (session.SessionStartTime == session.SessionEndTime)).
+                OrderBy(s => s.SessionStartTime).ToList();
+            db.RemoveRange(sameStartEndRows);
+
+            // look for more than one open rows
+            var openRows = db.UserActivitySessionSet.Where(
+                session => (session.SessionEndTime == DateTime.MinValue)).
+                OrderByDescending(s => s.Id).ToList();
+            if (openRows.Count > 1)
+            {
+                // Remove all except latest open row
+                db.RemoveRange(openRows.Skip(1));
             }
 
             db.SaveChanges();
