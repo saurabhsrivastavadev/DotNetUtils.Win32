@@ -28,6 +28,7 @@ namespace DotNetUtils.Win32.UserActivity
                 DateTime lastMonitoringEvent = MetaInfoUpdate();
                 SessionUpdate(lastMonitoringEvent);
                 DbSanityCheck();
+                InvokeInactivityCallbacks();
             }
         }
 
@@ -137,6 +138,15 @@ namespace DotNetUtils.Win32.UserActivity
             db.SaveChanges();
         }
 
+        private static void InvokeInactivityCallbacks()
+        {
+            if (UserActivityMonitor.Instance.UserInactiveCallback != null && !IsUserActive())
+            {
+                UserActivityMonitor.Instance.UserInactiveCallback(
+                                                LastInputInfo.GetLastUserInputTime());
+            }
+        }
+
         private static UserActivitySessionModel NewUnmonitoredSessionRow(DateTime lastMonitoringEvent)
         {
             var session = Factory.NewUserActivitySessionModel();
@@ -160,7 +170,7 @@ namespace DotNetUtils.Win32.UserActivity
 
         private static bool IsUserActive() =>
             (LastInputInfo.GetMillisSinceLastUserInput() <
-                    Factory.UserConsideredInactiveAfter.TotalMilliseconds);
+                    UserActivityMonitor.Instance.UserInactivityThreshold.TotalMilliseconds);
 
         private static UserActivityState GetCurrentUserActivityState() =>
             IsUserActive() ? UserActivityState.ACTIVE : UserActivityState.INACTIVE;

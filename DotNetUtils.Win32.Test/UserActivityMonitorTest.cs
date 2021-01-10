@@ -13,14 +13,15 @@ namespace DotNetUtils.Win32.Test
         private const string TestAppName = "DotNetUtils.Win32.Test";
 
         [TestMethod]
-        public void TestFactoryAppNameValidation()
+        public void TestEmptyAppNameNotAllowed()
         {
             bool exceptionRaised;
+            UserActivityMonitor.ResetInstance();
 
             try
             {
                 exceptionRaised = false;
-                var uam = new UserActivityMonitor("");
+                var uam = UserActivityMonitor.GetInstance("");
             }
             catch (Exception) { exceptionRaised = true; }
             Assert.IsTrue(exceptionRaised, "Empty app name should not be accepted.");
@@ -28,7 +29,7 @@ namespace DotNetUtils.Win32.Test
             try
             {
                 exceptionRaised = false;
-                var uam = new UserActivityMonitor("   ");
+                var uam = UserActivityMonitor.GetInstance("   ");
             }
             catch (Exception) { exceptionRaised = true; }
             Assert.IsTrue(exceptionRaised, "Whitespace app name should not be accepted.");
@@ -36,16 +37,62 @@ namespace DotNetUtils.Win32.Test
             try
             {
                 exceptionRaised = false;
-                var uam = new UserActivityMonitor(null);
+                var uam = UserActivityMonitor.GetInstance(null);
             }
             catch (Exception) { exceptionRaised = true; }
             Assert.IsTrue(exceptionRaised, "null app name should not be accepted.");
+
+            UserActivityMonitor.ResetInstance();
+        }
+
+        [TestMethod]
+        public void TestAppNameUpdateNotAllowed()
+        {
+            bool exceptionRaised;
+            bool isFirstInstance = UserActivityMonitor.Instance == null;
+            UserActivityMonitor uamFirst = null, uam = null;
+
+            UserActivityMonitor.ResetInstance();
+
+            try
+            {
+                exceptionRaised = false;
+                uamFirst = UserActivityMonitor.GetInstance("DotNetUtils.Win32.Test.Temp.Delete");
+            }
+            catch (Exception) { exceptionRaised = true; }
+            if (isFirstInstance)
+            {
+                Assert.IsFalse(exceptionRaised, "No exception expected for first instance with valid app name.");
+            }
+            else
+            {
+                Assert.IsTrue(exceptionRaised, "Exception for second instance request with different app name.");
+            }
+
+            try
+            {
+                exceptionRaised = false;
+                uam = UserActivityMonitor.GetInstance("DotNetUtils.Win32.Test.Temp.Delete");
+            }
+            catch (Exception) { exceptionRaised = true; }
+            Assert.IsFalse(exceptionRaised, "No exception expected for GetInstance with same app name.");
+            Assert.IsTrue(uam == uamFirst, "Same instance expected with same AppName.");
+
+            try
+            {
+                exceptionRaised = false;
+                uam = UserActivityMonitor.GetInstance("DotNetUtils.Win32.Test.Temp.Delete.Second");
+            }
+            catch (Exception) { exceptionRaised = true; }
+            Assert.IsTrue(exceptionRaised, "Exception expected for second GetInstance with same app name.");
+
+            UserActivityMonitor.ResetInstance();
         }
 
         [TestMethod]
         public void TestClearAllUserActivityStats()
         {
-            var uam = new UserActivityMonitor(TestAppName);
+            var uam = UserActivityMonitor.GetInstance(TestAppName);
 
             uam.ClearAllUserActivityStats();
 
@@ -63,10 +110,10 @@ namespace DotNetUtils.Win32.Test
         [DataRow(30)]
         public void TestClearAndGetStats(int monitorForSeconds)
         {
-            var uam = new UserActivityMonitor(TestAppName);
+            var uam = UserActivityMonitor.GetInstance(TestAppName);
 
             Factory.MonitoringInterval = TimeSpan.FromSeconds(5);
-            Factory.UserConsideredInactiveAfter = TimeSpan.FromSeconds(10);
+            uam.UserInactivityThreshold = TimeSpan.FromSeconds(10);
 
             uam.ClearAllUserActivityStats();
 
@@ -88,7 +135,7 @@ namespace DotNetUtils.Win32.Test
         [TestMethod]
         public void TestMonitor()
         {
-            var uam = new UserActivityMonitor(TestAppName);
+            var uam = UserActivityMonitor.GetInstance(TestAppName);
 
             uam.StartMonitoring();
 
@@ -103,11 +150,10 @@ namespace DotNetUtils.Win32.Test
         public void TestGetUserActivityStats(int statsDurationSec, bool startMonitoring)
         {
             Factory.MonitoringInterval = TimeSpan.FromSeconds(5);
-            Factory.UserConsideredInactiveAfter = TimeSpan.FromSeconds(10);
-
             TimeSpan statsDuration = TimeSpan.FromSeconds(statsDurationSec);
 
-            var uam = new UserActivityMonitor(TestAppName);
+            var uam = UserActivityMonitor.GetInstance(TestAppName);
+            uam.UserInactivityThreshold = TimeSpan.FromSeconds(10);
 
             if (startMonitoring)
             {
@@ -136,7 +182,7 @@ namespace DotNetUtils.Win32.Test
             DateTime statsFrom = DateTime.Now - statsDuration;
             DateTime statsTo = DateTime.Now;
 
-            var uam = new UserActivityMonitor(TestAppName);
+            var uam = UserActivityMonitor.GetInstance(TestAppName);
 
             for (int i = 0; i < monitoringCycles; i++)
             {
@@ -148,11 +194,14 @@ namespace DotNetUtils.Win32.Test
 
             var stats = uam.GetUserActivityStats(statsFrom, statsTo);
 
-            DateTime lastEnd = DateTime.MinValue;
-            foreach (var stat in stats.CompleteSessionList)
+            if (stats.CompleteSessionList.Count > 0)
             {
-                Assert.IsTrue(stat.SessionStartTime != lastEnd);
-                lastEnd = stat.SessionEndTime;
+                UserActivityState lastState = stats.CompleteSessionList[0].ActivityState;
+                foreach (var stat in stats.CompleteSessionList.ToArray()[1..])
+                {
+                    Assert.IsTrue(stat.ActivityState != lastState);
+                    lastState = stat.ActivityState;
+                }
             }
         }
 
@@ -166,7 +215,7 @@ namespace DotNetUtils.Win32.Test
             DateTime statsFrom = DateTime.Now - statsDuration;
             DateTime statsTo = DateTime.Now;
 
-            var uam = new UserActivityMonitor(TestAppName);
+            var uam = UserActivityMonitor.GetInstance(TestAppName);
             var stats = uam.GetUserActivityStats(statsFrom, statsTo);
 
             foreach (var stat in stats.CompleteSessionList)
@@ -189,7 +238,7 @@ namespace DotNetUtils.Win32.Test
             DateTime statsFrom = DateTime.Now - statsDuration;
             DateTime statsTo = DateTime.Now;
 
-            var uam = new UserActivityMonitor(TestAppName);
+            var uam = UserActivityMonitor.GetInstance(TestAppName);
 
             if (monitoringCycles > 0)
             {
@@ -213,6 +262,40 @@ namespace DotNetUtils.Win32.Test
                     openRowFound = true;
                 }
             }
+        }
+
+        [TestMethod]
+        public void TestInactivityCallback()
+        {
+            var uam = UserActivityMonitor.GetInstance(TestAppName);
+
+            DateTime lastInputTime = DateTime.MinValue;
+            DateTime begin = DateTime.Now;
+
+            TimeSpan inactivityThreshold = TimeSpan.FromSeconds(10);
+
+            UserInactiveCallbackType localCb = t => lastInputTime = t;
+
+            uam.UserInactivityThreshold = inactivityThreshold;
+            uam.UserInactiveCallback += localCb;
+
+            Thread.Sleep(inactivityThreshold.Add(TimeSpan.FromSeconds(1)));
+            Assert.IsTrue(lastInputTime == DateTime.MinValue, $"lastInputTime {lastInputTime}");
+
+            uam.StartMonitoring();
+            Thread.Sleep(inactivityThreshold.Add(TimeSpan.FromSeconds(1)));
+            uam.StopMonitoring();
+
+            Assert.IsTrue(lastInputTime != DateTime.MinValue, $"lastInputTime {lastInputTime}");
+
+            lastInputTime = DateTime.MinValue;
+            uam.UserInactiveCallback -= localCb;
+
+            uam.StartMonitoring();
+            Thread.Sleep(inactivityThreshold.Add(TimeSpan.FromSeconds(1)));
+            uam.StopMonitoring();
+
+            Assert.IsTrue(lastInputTime == DateTime.MinValue, $"lastInputTime {lastInputTime}");
         }
 
         private double GetStatsTotalDurationDelta(

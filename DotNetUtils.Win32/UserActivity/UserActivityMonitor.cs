@@ -5,16 +5,19 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Timers;
 
+[assembly: InternalsVisibleTo("DotNetUtils.Win32.Test")]
 namespace DotNetUtils.Win32.UserActivity
 {
     public class UserActivityMonitor : IUserActivityMonitor
     {
         private Timer _monitoringTimer;
 
-        public TimeSpan UserInactivityThreshold { get; set; }
+        public TimeSpan UserInactivityThreshold { get; set; } = TimeSpan.FromMinutes(2);
+
         public UserInactiveCallbackType UserInactiveCallback { get; set; }
 
         /// <summary>
@@ -23,9 +26,36 @@ namespace DotNetUtils.Win32.UserActivity
         /// <param name="appName">
         /// Name of the application using DotNetUtils.Win32 library
         /// </param>
-        public UserActivityMonitor(string appName)
+        private UserActivityMonitor(string appName)
         {
             Factory.AppName = appName;
+        }
+
+        public static UserActivityMonitor Instance { get; private set; }
+        public static UserActivityMonitor GetInstance(string appName)
+        {
+            if (Instance == null)
+            {
+                Instance = new UserActivityMonitor(appName);
+            }
+            else if (appName != Factory.AppName)
+            {
+                throw new ArgumentException(
+                    $"Cannot change app name, current {Factory.AppName} new {appName}");
+            }
+
+            return Instance;
+        }
+
+        /// <summary>
+        /// Method meant to be used only for Unit Testing.
+        /// So that multiple tests don't interfere while getting the singleton
+        /// instance of this class.
+        /// </summary>
+        internal static void ResetInstance()
+        {
+            Instance = null;
+            Factory.ResetAppName();
         }
 
         public DateTime GetLastUserInputTime()

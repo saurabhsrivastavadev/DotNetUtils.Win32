@@ -20,9 +20,9 @@ namespace DotNetUtils.Win32.UserActivity
         }
         private static string _appName;
 
-        public static TimeSpan MonitoringInterval { get; set; } = TimeSpan.FromMinutes(1);
+        internal static void ResetAppName() => _appName = null;
 
-        public static TimeSpan UserConsideredInactiveAfter { get; set; } = TimeSpan.FromMinutes(2);
+        public static TimeSpan MonitoringInterval { get; set; } = TimeSpan.FromMinutes(1);
 
         internal static UserActivityContext NewUserActivityContext() => new UserActivityContext();
 
